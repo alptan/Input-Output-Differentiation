@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grade 11 ICT Quiz: Computer Input and Output</title>
+<style>
+  :root { --navy:#17324d; --blue:#2563a6; --light:#f3f7fb; --green:#168447; --red:#c62828; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--light); color:#1d2935; line-height:1.5; }
+  header { background:linear-gradient(120deg,#17324d,#2563a6); color:white; padding:30px 18px; text-align:center; }
+  header h1 { margin:0 0 8px; font-size:clamp(1.5rem,4vw,2.2rem); }
+  header p { margin:0; }
+  main { width:min(950px,94%); margin:24px auto 50px; }
+  .panel,.question { background:white; border-radius:14px; padding:20px; margin-bottom:18px; box-shadow:0 3px 14px #18334d12; }
+  .panel h2 { margin-top:0; color:var(--navy); }
+  .student-grid { display:grid; grid-template-columns:2fr 1fr 1fr; gap:14px; }
+  label { display:block; font-weight:700; margin-bottom:6px; }
+  input[type=text],input[type=date] { width:100%; padding:11px; border:1px solid #aab8c5; border-radius:8px; font:inherit; }
+  .progress-wrap { background:#dce6ef; height:10px; border-radius:20px; overflow:hidden; margin-top:12px; }
+  .progress { height:100%; width:0; background:#2b8a57; transition:width .2s; }
+  .question h3 { margin:0 0 12px; color:var(--navy); font-size:1.05rem; }
+  .option { display:flex; align-items:flex-start; gap:9px; padding:9px 10px; margin:7px 0; border:1px solid #d7e0e8; border-radius:8px; cursor:pointer; }
+  .option:hover { background:#f6f9fc; }
+  .option input { margin-top:5px; accent-color:var(--blue); }
+  .q-actions { display:flex; align-items:center; gap:12px; margin-top:13px; flex-wrap:wrap; }
+  button { border:0; border-radius:8px; padding:11px 17px; font-weight:700; font-size:1rem; cursor:pointer; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .submit { background:var(--blue); color:white; }
+  .feedback { font-weight:700; min-height:28px; }
+  .correct { color:var(--green); }
+  .incorrect { color:var(--red); }
+  .mark { display:inline-flex; width:25px; height:25px; border-radius:50%; align-items:center; justify-content:center; color:white; margin-right:5px; font-size:18px; }
+  .mark.good { background:var(--green); } .mark.bad { background:var(--red); }
+  .locked .option { cursor:default; }
+  .locked .option:hover { background:white; }
+  .bottom-actions { display:flex; gap:12px; flex-wrap:wrap; }
+  #emailBtn { background:#176b43; color:white; } #againBtn { background:#5b6570; color:white; }
+  .notice { color:#455766; font-size:.93rem; }
+  #result { display:none; text-align:center; }
+  #result h2 { margin-bottom:4px; }
+  #trophy { display:none; font-size:clamp(5rem,18vw,10rem); line-height:1.2; animation:pulse 1s ease-in-out infinite; transform-origin:center; }
+  @keyframes pulse { 0%,100%{transform:scale(.78)} 50%{transform:scale(1.18)} }
+  #confetti { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:10; display:none; }
+  .piece { position:absolute; top:-20px; width:10px; height:16px; animation:fall var(--duration) linear forwards; }
+  @keyframes fall { to { transform:translate3d(var(--drift),110vh,0) rotate(900deg); } }
+  .small { font-size:.9rem; color:#536474; }
+  @media(max-width:650px){ .student-grid{grid-template-columns:1fr;} .panel,.question{padding:16px;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Grade 11 ICT Quiz</h1>
+  <p>Computer Input, Input Devices, Computer Output and Output Devices</p>
+</header>
+<main>
+  <section class="panel">
+    <h2>Student Information</h2>
+    <div class="student-grid">
+      <div><label for="studentName">Full Name</label><input id="studentName" type="text" autocomplete="name" placeholder="Enter your full name" required></div>
+      <div><label for="studentClass">Class</label><input id="studentClass" type="text" placeholder="e.g. 11A" required></div>
+      <div><label for="quizDate">Date</label><input id="quizDate" type="date" required></div>
+    </div>
+    <p class="small">Answer all 20 questions. Select an answer and submit it to receive feedback. Once submitted, an answer cannot be changed.</p>
+    <div><strong id="progressText">0 of 20 questions completed</strong><div class="progress-wrap"><div class="progress" id="progressBar"></div></div></div>
+  </section>
+
+  <div id="quiz"></div>
+
+  <section class="panel" id="result">
+    <h2>Quiz completed!</h2>
+    <p id="scoreText"></p>
+    <div id="trophy" aria-label="Trophy">🏆</div>
+    <p id="resultMessage"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Submit Your First Attempt</h2>
+    <p class="notice">The email button becomes available after all questions have been answered and submitted. Selecting it opens an email draft addressed to your teacher, with your details, score and responses included. You must send the email from your email application before taking the quiz again.</p>
+    <div class="bottom-actions">
+      <button id="emailBtn" disabled>Email your answers</button>
+      <button id="againBtn" disabled>Take the quiz again</button>
+    </div>
+    <p id="emailStatus" class="small" aria-live="polite"></p>
+  </section>
+</main>
+<div id="confetti"></div>
+
+<script>
+const questions = [
+ {q:"Which statement best defines computer input?",a:["Information produced by a computer after processing","Data and instructions entered into a computer for processing","Hardware that displays information","A printed copy of a document"],c:1},
+ {q:"Which statement best describes a computer input device?",a:["A physical component used to enter data and instructions","Information displayed on a monitor","A result produced after processing","A device used only to print documents"],c:0},
+ {q:"Which of the following is an example of computer input?",a:["A printed report","Music heard through speakers","The numbers entered into a spreadsheet","A picture displayed on a projector"],c:2},
+ {q:"Which item is an input device?",a:["Monitor","Keyboard","Printer","Speakers"],c:1},
+ {q:"A student types an essay in a word processor. What is the input?",a:["The keyboard","The words and sentences typed","The monitor","The printed essay"],c:1},
+ {q:"Which device is most suitable for entering a paper photograph into a computer as a digital image?",a:["Scanner","Projector","Speaker","Printer"],c:0},
+ {q:"A person gives spoken instructions to a computer. Which device can capture the voice as input?",a:["Headphones","Monitor","Microphone","Projector"],c:2},
+ {q:"Which pair contains two input devices?",a:["Printer and monitor","Mouse and barcode reader","Speakers and headphones","Projector and printer"],c:1},
+ {q:"What is computer output?",a:["Data entered into a computer","The physical equipment used to enter data","Information or results produced after a computer processes data","A set of instructions waiting to be entered"],c:2},
+ {q:"Which statement best defines a computer output device?",a:["Hardware used to present or produce information from a computer","Any data typed into a computer","A program used to calculate numbers","A file stored on a USB drive"],c:0},
+ {q:"Which of the following is an example of computer output?",a:["A voice command spoken into a microphone","A number typed using a keyboard","A report displayed on the monitor","A barcode scanned at a shop"],c:2},
+ {q:"Which item is an output device?",a:["Webcam","Mouse","Microphone","Projector"],c:3},
+ {q:"A computer produces music that a user can hear. What is the output?",a:["The sound or music","The speakers","The keyboard","The microphone"],c:0},
+ {q:"Which device produces a hard copy of a document?",a:["Monitor","Printer","Scanner","Webcam"],c:1},
+ {q:"Which pair contains two output devices?",a:["Keyboard and mouse","Scanner and microphone","Monitor and speakers","Barcode reader and webcam"],c:2},
+ {q:"A teacher displays a presentation to the whole class using a large screen. Which output device is most appropriate?",a:["Barcode reader","Projector","Joystick","Scanner"],c:1},
+ {q:"Which option correctly matches an input device with the data it can capture?",a:["Speaker — spoken instructions","Microphone — voice or sound","Printer — typed letters","Monitor — scanned photographs"],c:1},
+ {q:"A touchscreen is different from a monitor that only displays information because a touchscreen can:",a:["Print documents","Store files permanently","Accept touch instructions as input as well as display output","Produce sound without speakers"],c:2},
+ {q:"Which option correctly distinguishes input from an input device?",a:["Input is the keyboard; the input device is the text typed","Input is the data entered; the input device is the hardware used to enter it","Input is the monitor; the input device is the picture displayed","They mean exactly the same thing"],c:1},
+ {q:"A student scans a worksheet, views the digital copy on a monitor, then prints it. Which sequence correctly identifies the input device, input, output device and output?",a:["Scanner; digital image; monitor; image displayed on screen","Monitor; printed page; scanner; keyboard","Printer; digital image; microphone; sound","Keyboard; monitor; scanner; printed page"],c:0}
+];
+
+const quizEl = document.getElementById('quiz');
+const dateEl = document.getElementById('quizDate');
+dateEl.value = new Date().toISOString().slice(0,10);
+let completed = 0, correctCount = 0, responses = Array(questions.length).fill(null), firstAttemptEmailed = false;
+
+function renderQuiz(){
+  quizEl.innerHTML = '';
+  questions.forEach((item,i)=>{
+    const section = document.createElement('section');
+    section.className = 'question';
+    section.id = `question-${i}`;
+    const heading = document.createElement('h3');
+    heading.textContent = `${i+1}. ${item.q}`;
+    section.appendChild(heading);
+    const choices = document.createElement('div');
+    item.a.forEach((answer,j)=>{
+      const label = document.createElement('label');
+      label.className = 'option';
+      const radio = document.createElement('input');
+      radio.type = 'radio'; radio.name = `q${i}`; radio.value = j;
+      const span = document.createElement('span'); span.textContent = answer;
+      label.append(radio,span); choices.appendChild(label);
+    });
+    section.appendChild(choices);
+    const actions = document.createElement('div'); actions.className='q-actions';
+    const submit = document.createElement('button'); submit.className='submit'; submit.textContent='Submit answer';
+    const feedback = document.createElement('div'); feedback.className='feedback'; feedback.id=`feedback-${i}`; feedback.setAttribute('aria-live','polite');
+    submit.addEventListener('click',()=>{
+      if(responses[i] !== null) return;
+      const selected = section.querySelector(`input[name="q${i}"]:checked`);
+      if(!selected){ feedback.textContent='Please select an answer before submitting.'; feedback.className='feedback'; return; }
+      const choice = Number(selected.value), isCorrect = choice === item.c;
+      responses[i] = {selected:choice, correct:isCorrect, question:item.q, chosen:item.a[choice], answer:item.a[item.c]};
+      if(isCorrect){ correctCount++; feedback.innerHTML='<span class="mark good">✓</span> Correct!'; feedback.className='feedback correct'; playTone(true); }
+      else { feedback.innerHTML='<span class="mark bad">✕</span> Incorrect. The correct answer is: '+escapeHTML(item.a[item.c]); feedback.className='feedback incorrect'; playTone(false); }
+      section.classList.add('locked');
+      section.querySelectorAll('input').forEach(r=>r.disabled=true);
+      submit.disabled=true;
+      completed++;
+      updateProgress();
+      if(completed===questions.length) finishQuiz();
+    });
+    actions.append(submit,feedback); section.appendChild(actions); quizEl.appendChild(section);
+  });
+}
+function escapeHTML(s){return s.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function updateProgress(){
+  document.getElementById('progressText').textContent=`${completed} of ${questions.length} questions completed`;
+  document.getElementById('progressBar').style.width=(completed/questions.length*100)+'%';
+}
+function playTone(win){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const now=ctx.currentTime;
+    const notes=win?[660,880,1046]:[240,180];
+    notes.forEach((hz,i)=>{
+      const osc=ctx.createOscillator(), gain=ctx.createGain();
+      osc.type=win?'sine':'triangle'; osc.frequency.value=hz;
+      gain.gain.setValueAtTime(0.0001,now+i*.16);
+      gain.gain.exponentialRampToValueAtTime(.13,now+i*.16+.025);
+      gain.gain.exponentialRampToValueAtTime(.0001,now+i*.16+(win?.14:.22));
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.start(now+i*.16);osc.stop(now+i*.16+(win?.16:.24));
+    });
+    setTimeout(()=>ctx.close(),1000);
+  }catch(e){/* Sound may be unavailable if the browser blocks audio. */}
+}
+function finishQuiz(){
+  document.getElementById('result').style.display='block';
+  document.getElementById('scoreText').textContent=`Your score: ${correctCount} out of ${questions.length} (${Math.round(correctCount/questions.length*100)}%).`;
+  document.getElementById('resultMessage').textContent=correctCount===questions.length?'Outstanding! You answered every question correctly.': 'Review the feedback above to see which concepts you can revise.';
+  document.getElementById('emailBtn').disabled=false;
+  if(correctCount===questions.length){ document.getElementById('trophy').style.display='block'; launchConfetti(); }
+  document.getElementById('result').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function launchConfetti(){
+  const layer=document.getElementById('confetti'); layer.style.display='block';
+  const colors=['#e63946','#f4a261','#2a9d8f','#457b9d','#f1c40f','#9b5de5'];
+  for(let i=0;i<150;i++){
+    const piece=document.createElement('i');piece.className='piece';
+    piece.style.left=Math.random()*100+'vw';piece.style.background=colors[i%colors.length];
+    piece.style.setProperty('--drift',(Math.random()*240-120)+'px');
+    piece.style.setProperty('--duration',(2.5+Math.random()*3)+'s');
+    piece.style.animationDelay=(Math.random()*.8)+'s';layer.appendChild(piece);
+  }
+  setTimeout(()=>{layer.style.display='none';layer.innerHTML='';},6500);
+}
+document.getElementById('emailBtn').addEventListener('click',()=>{
+  if(completed!==questions.length) return;
+  const name=document.getElementById('studentName').value.trim();
+  const klass=document.getElementById('studentClass').value.trim();
+  const date=document.getElementById('quizDate').value;
+  if(!name||!klass||!date){ alert('Please enter your full name, class and date before emailing your answers.'); return; }
+  const lines=[
+    'GRADE 11 ICT QUIZ: COMPUTER INPUT AND OUTPUT',
+    `Student: ${name}`,`Class: ${klass}`,`Date: ${date}`,
+    `Score: ${correctCount}/${questions.length} (${Math.round(correctCount/questions.length*100)}%)`,'',
+    'RESPONSES:'
+  ];
+  responses.forEach((r,i)=>lines.push(`${i+1}. ${r.question}`,`Selected: ${r.chosen}`,`Correct answer: ${r.answer}`,`Result: ${r.correct?'Correct':'Incorrect'}`,''));
+  const subject=encodeURIComponent(`Grade 11 ICT Quiz - ${name}`);
+  const body=encodeURIComponent(lines.join('\n'));
+  const mailto=`mailto:talphonse@ess.edu.lc?subject=${subject}&body=${body}`;
+  document.getElementById('emailStatus').textContent='Your email application should open with the quiz responses. Send the email there; then return to this page and select “Take the quiz again”.';
+  firstAttemptEmailed=true;
+  document.getElementById('againBtn').disabled=false;
+  window.location.href=mailto;
+});
+document.getElementById('againBtn').addEventListener('click',()=>{
+  if(!firstAttemptEmailed) return;
+  completed=0;correctCount=0;responses=Array(questions.length).fill(null);firstAttemptEmailed=false;
+  document.getElementById('studentName').value='';
+  document.getElementById('studentClass').value='';
+  dateEl.value=new Date().toISOString().slice(0,10);
+  document.getElementById('result').style.display='none';
+  document.getElementById('trophy').style.display='none';
+  document.getElementById('emailBtn').disabled=true;
+  document.getElementById('againBtn').disabled=true;
+  document.getElementById('emailStatus').textContent='';
+  updateProgress();renderQuiz();window.scrollTo({top:0,behavior:'smooth'});
+});
+renderQuiz();
+</script>
+</body>
+</html>
